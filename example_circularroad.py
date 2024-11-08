@@ -60,7 +60,7 @@ if not human_controller:
     # Initialize DQL agent
     state_size = 4  # distance_to_center, velocity, heading_diff, heading
     action_size = 15  # 5 steering actions * 3 throttle actions
-    agent = DQLAgent(state_size, action_size)
+    agent = DQLAgent(c1.position, c1.heading, state_size, action_size, cb)
     
     for episode in range(EPISODES):
         # Reset the environment
@@ -76,7 +76,7 @@ if not human_controller:
         total_reward = 0
         for time_step in range(600):
             # Get current state
-            state = agent.get_state(c1, cb)
+            state = agent.get_state(cb)
             
             # Track laps
             current_angle = np.arctan2(c1.center.y - world_height/2, c1.center.x - world_width/2)

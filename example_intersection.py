@@ -3,6 +3,7 @@ from world import World
 from agents import Car, RectangleBuilding, Pedestrian, Painting
 from geometry import Point
 import time
+from dql_agent import DQLAgent  # Import the DQL agent
 
 human_controller = False
 
@@ -58,8 +59,9 @@ w.add(Painting(Point(100, 81), Point(0.5, 2), 'white'))
 w.add(Painting(Point(101, 81), Point(0.5, 2), 'white'))
 w.add(Painting(Point(102, 81), Point(0.5, 2), 'white'))
 
-# A Car object is a dynamic object -- it can move. We construct it using its center location and heading angle.
-c1 = Car(Point(20,20), np.pi/2)
+# Replace c1 with DQL agent and define goal
+goal = Point(99, 8)
+c1 = DQLAgent(Point(20,20), np.pi/2, goal)
 w.add(c1)
 
 c2 = Car(Point(118,90), np.pi, 'blue')
@@ -71,12 +73,12 @@ c3.velocity = Point(0.0,3.0) # We can also specify an initial velocity just like
 w.add(c3)
 
 # Add a pedestrian at the top left zebra crossing
-p1 = Pedestrian(Point(21, 81), np.pi)
+p1 = Pedestrian(Point(28, 81), np.pi)
 p1.max_speed = 10.0
 w.add(p1)
 
 # Add a pedestrian at the top right zebra crossing
-p2 = Pedestrian(Point(99, 81), -np.pi)
+p2 = Pedestrian(Point(90, 81), 0)
 p2.max_speed = 10.0
 w.add(p2)
 
@@ -84,30 +86,98 @@ w.render() # This visualizes the world we just constructed.
 
 
 if not human_controller:
-    # Let's implement some simple scenario with all agents
-    #p1.set_control(0, 0.22) # The pedestrian will have 0 steering and 0.22 throttle. So it will not change its direction.
-    c1.set_control(0, 0.35)
-    c2.set_control(0, 0.05)
-    c3.set_control(0, 0.05)
-    for k in range(400):
-        # All movable objects will keep their control the same as long as we don't change it.
-        if k == 100: # Let's say the first Car will release throttle (and start slowing down due to friction)
-            c1.set_control(0, 0)
-        elif k == 200: # The first Car starts pushing the brake a little bit. The second Car starts turning right with some throttle.
-            c1.set_control(0, -0.02)
-        elif k == 325:
-            c1.set_control(0, 0.8)
-            c2.set_control(-0.45, 0.3)
-        elif k == 367: # The second Car stops turning.
-            c2.set_control(0, 0.1)
-        w.tick() # This ticks the world for one time step (dt second)
-        w.render()
-        time.sleep(dt/4) # Let's watch it 4x
+    num_episodes = 1000
+    max_steps = 400
+    for episode in range(num_episodes):        
+        w.reset()
+        # Reset agent position and add back to world
+        c1.center = Point(20, 20)
+        c1.heading = np.pi/2
+        c1.velocity = Point(0, 0)
+        w.add(c1)
+        
+        # Reset other agents
+        c2.center = Point(118, 90)
+        c2.heading = np.pi
+        c2.velocity = Point(3.0, 0)
+        w.add(c2)
+        
+        c3.center = Point(10, 86)
+        c3.heading = 0
+        c3.velocity = Point(0.0, 3.0)
+        w.add(c3)
+        
+        p1.center = Point(28, 81)
+        p1.heading = np.pi
+        w.add(p1)
+        
+        p2.center = Point(90, 81)
+        p2.heading = 0
+        w.add(p2)
+        
+        # Reset controls for other agents
+        p1.set_control(0, 0.22)
+        p2.set_control(0, 0.22)
+        c2.set_control(0, 0.05)
+        c3.set_control(0, 0.05)
+        
+        episode_rewards = 0
+        c1.prev_distance = c1.position.distanceTo(goal)
 
-        if w.collision_exists(p1) or w.collision_exists(p2): # We can check if the Pedestrian is currently involved in a collision. We could also check c1 or c2.
-            print('Pedestrian has died!')
-        elif w.collision_exists(): # Or we can check if there is any collision at all.
-            print('Collision exists somewhere...')
+        w.render()
+        
+        print(f'\nStarting Episode {episode + 1}')
+        
+        for step in range(max_steps):
+            state = c1.get_state(w)
+            action = c1.select_action(state)
+            c1.set_control(action[0], action[1])
+            
+            # Update other cars at specific times
+            if step == 325:
+                c2.set_control(-0.45, 0.3)
+            elif step == 367:
+                c2.set_control(0, 0.1)
+            
+            w.tick()
+            w.render()
+            #time.sleep(dt/4)
+            
+            reward = 0
+            done = False
+            
+            # Check for collisions
+            if w.collision_exists():
+                print('Collision occurred!')
+                reward = -100
+                done = True
+            
+            # Check if goal reached
+            distance_to_goal = c1.position.distanceTo(goal)
+            if distance_to_goal < 5:
+                print('Goal reached!')
+                reward = 100
+                done = True
+            
+            if not done:
+                reward = -0.1
+                reward += 0.3 * (c1.prev_distance - distance_to_goal)
+            
+            next_state = c1.get_state(w)
+            c1.store_transition(state, action, reward, next_state, done)
+            c1.train()
+            
+            c1.prev_distance = distance_to_goal
+            episode_rewards += reward
+            
+            if done:
+                print(f'Episode {episode + 1} finished after {step} steps. Total reward: {episode_rewards:.2f}')
+                break
+        
+        # If episode didn't end naturally
+        if not done:
+            print(f'Episode {episode + 1} timed out. Total reward: {episode_rewards:.2f}')
+
     w.close()
 
 else: # Let's use the steering wheel (Logitech G29) for the human control of car c1

@@ -7,6 +7,7 @@ import copy
 class Entity:
     def __init__(self, center: Point, heading: float, movable: bool = True, friction: float = 0):
         self.center = center # this is x, y
+        self.position = center
         self.heading = heading
         self.movable = movable
         self.color = 'ghost white'

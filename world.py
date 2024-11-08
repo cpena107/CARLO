@@ -59,3 +59,22 @@ class World:
     def reset(self):
         self.dynamic_agents = []
         self.t = 0
+    
+    def get_nearby_objects(self, source_object, radius):
+        """
+        Returns a list of objects within the specified radius of the source object.
+        
+        Args:
+            source_object: The object to check around
+            radius: The radius in meters to check for nearby objects
+            
+        Returns:
+            List of objects within the radius
+        """
+        nearby = []
+        for obj in self.dynamic_agents:
+            if obj != source_object:  # Don't include the source object itself
+                distance = source_object.position.distanceTo(obj.position)
+                if distance <= radius:
+                    nearby.append(obj)
+        return nearby
