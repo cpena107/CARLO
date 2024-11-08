@@ -13,18 +13,32 @@ w = World(dt, width = 120, height = 120, ppm = 6) # The world is 120 meters by 1
 # A Painting object is a rectangle that the vehicles cannot collide with. So we use them for the sidewalks.
 # A RectangleBuilding object is also static -- it does not move. But as opposed to Painting, it can be collided with.
 # For both of these objects, we give the center point and the size.
-w.add(Painting(Point(71.5, 106.5), Point(97, 27), 'gray80')) # We build a sidewalk.
-w.add(RectangleBuilding(Point(72.5, 107.5), Point(95, 25))) # The RectangleBuilding is then on top of the sidewalk, with some margin.
 
-# Let's repeat this for 4 different RectangleBuildings.
+# top left building
 w.add(Painting(Point(8.5, 106.5), Point(17, 27), 'gray80'))
 w.add(RectangleBuilding(Point(7.5, 107.5), Point(15, 25)))
 
+# bottom left building
 w.add(Painting(Point(8.5, 41), Point(17, 82), 'gray80'))
 w.add(RectangleBuilding(Point(7.5, 40), Point(15, 80)))
 
-w.add(Painting(Point(71.5, 41), Point(97, 82), 'gray80'))
-w.add(RectangleBuilding(Point(72.5, 40), Point(70, 90)))
+# top middle building
+w.add(Painting(Point(60, 106.5), Point(70, 27), 'gray80')) 
+w.add(RectangleBuilding(Point(60, 107.5), Point(66, 25))) 
+
+# bottom middle building
+w.add(Painting(Point(60, 41), Point(70, 82), 'gray80'))
+w.add(RectangleBuilding(Point(60, 40), Point(66, 80)))
+
+# top right building
+w.add(Painting(Point(111.5, 106.5), Point(17, 27), 'gray80'))  
+w.add(RectangleBuilding(Point(112.5, 107.5), Point(15, 25)))
+
+# bottom right building
+w.add(Painting(Point(111.5, 41), Point(17, 82), 'gray80'))  
+w.add(RectangleBuilding(Point(112.5, 40), Point(15, 80)))
+
+w.add(Painting(Point(99, 8), Point(10, 10), 'white'))
 
 # Let's also add some zebra crossings, because why not.
 w.add(Painting(Point(18, 81), Point(0.5, 2), 'white'))
@@ -32,15 +46,12 @@ w.add(Painting(Point(19, 81), Point(0.5, 2), 'white'))
 w.add(Painting(Point(20, 81), Point(0.5, 2), 'white'))
 w.add(Painting(Point(21, 81), Point(0.5, 2), 'white'))
 w.add(Painting(Point(22, 81), Point(0.5, 2), 'white'))
-
-# Add new sidewalks and buildings for the far right intersection
-w.add(Painting(Point(111.5, 106.5), Point(17, 27), 'gray80'))  # Top right sidewalk
-w.add(RectangleBuilding(Point(112.5, 107.5), Point(15, 25)))
-
-w.add(Painting(Point(111.5, 41), Point(17, 82), 'gray80'))  # Bottom right sidewalk
-w.add(RectangleBuilding(Point(112.5, 40), Point(15, 80)))
+w.add(Painting(Point(23, 81), Point(0.5, 2), 'white'))
+w.add(Painting(Point(24, 81), Point(0.5, 2), 'white'))
 
 # Add zebra crossings for the new intersection (similar pattern as existing ones)
+w.add(Painting(Point(96, 81), Point(0.5, 2), 'white'))
+w.add(Painting(Point(97, 81), Point(0.5, 2), 'white'))
 w.add(Painting(Point(98, 81), Point(0.5, 2), 'white'))
 w.add(Painting(Point(99, 81), Point(0.5, 2), 'white'))
 w.add(Painting(Point(100, 81), Point(0.5, 2), 'white'))
@@ -55,19 +66,29 @@ c2 = Car(Point(118,90), np.pi, 'blue')
 c2.velocity = Point(3.0,0) # We can also specify an initial velocity just like this.
 w.add(c2)
 
-# Pedestrian is almost the same as Car. It is a "circle" object rather than a rectangle.
-p1 = Pedestrian(Point(28,81), np.pi)
-p1.max_speed = 10.0 # We can specify min_speed and max_speed of a Pedestrian (and of a Car). This is 10 m/s, almost Usain Bolt.
+c3 = Car(Point(10,86), 0, 'yellow')
+c3.velocity = Point(0.0,3.0) # We can also specify an initial velocity just like this.
+w.add(c3)
+
+# Add a pedestrian at the top left zebra crossing
+p1 = Pedestrian(Point(21, 81), np.pi)
+p1.max_speed = 10.0
 w.add(p1)
+
+# Add a pedestrian at the top right zebra crossing
+p2 = Pedestrian(Point(99, 81), -np.pi)
+p2.max_speed = 10.0
+w.add(p2)
 
 w.render() # This visualizes the world we just constructed.
 
 
 if not human_controller:
     # Let's implement some simple scenario with all agents
-    p1.set_control(0, 0.22) # The pedestrian will have 0 steering and 0.22 throttle. So it will not change its direction.
+    #p1.set_control(0, 0.22) # The pedestrian will have 0 steering and 0.22 throttle. So it will not change its direction.
     c1.set_control(0, 0.35)
     c2.set_control(0, 0.05)
+    c3.set_control(0, 0.05)
     for k in range(400):
         # All movable objects will keep their control the same as long as we don't change it.
         if k == 100: # Let's say the first Car will release throttle (and start slowing down due to friction)
@@ -83,7 +104,7 @@ if not human_controller:
         w.render()
         time.sleep(dt/4) # Let's watch it 4x
 
-        if w.collision_exists(p1): # We can check if the Pedestrian is currently involved in a collision. We could also check c1 or c2.
+        if w.collision_exists(p1) or w.collision_exists(p2): # We can check if the Pedestrian is currently involved in a collision. We could also check c1 or c2.
             print('Pedestrian has died!')
         elif w.collision_exists(): # Or we can check if there is any collision at all.
             print('Collision exists somewhere...')
