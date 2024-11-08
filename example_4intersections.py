@@ -1,7 +1,13 @@
 import numpy as np
+import torch
 from world import World
-from agents import Car, RectangleBuilding, Painting
+from agents import Car, RingBuilding, CircleBuilding, Painting, Pedestrian, RectangleBuilding
 from geometry import Point
+import time
+from tkinter import *
+from dql_agent import DQLAgent
+
+human_controller = False
 
 # World settings
 dt = 0.1  # time steps in seconds
@@ -96,19 +102,119 @@ c1.max_speed = 30.0  # 30 m/s (108 km/h)
 c1.velocity = Point(0, 3.0)
 w.add(c1)
 
-if __name__ == "__main__":
-    # Simple visualization loop
-    from interactive_controllers import KeyboardController
+w.render() # This visualizes the world we just constructed.
+
+if not human_controller:
+    # Training settings
+    EPISODES = 1000
+    batch_size = 32
     
-    c1.set_control(0., 0.)
-    controller = KeyboardController(w)
+    # Initialize DQL agent
+    state_size = 6  # x, y, velocity_x, velocity_y, heading, distance_to_goal
+    action_size = 15  # 5 steering actions * 3 throttle actions
+    agent = DQLAgent(state_size, action_size)
     
-    try:
-        for _ in range(600):
-            c1.set_control(controller.steering, controller.throttle)
+    # Define start and goal positions
+    start_pos = Point(world_width/4 - lane_width/2, 10)  # Bottom of map
+    goal_pos = Point(world_width/4 - lane_width/2, world_height - 10)  # Top of map
+    goal_radius = 5.0  # Success radius around goal
+    
+    for episode in range(EPISODES):
+        # Reset the environment
+        c1.center = start_pos
+        c1.heading = np.pi/2  # Pointing upward
+        c1.velocity = Point(0, 3.0)
+        
+        total_reward = 0
+        steps = 0
+        max_steps = 600
+        
+        while steps < max_steps:
+            # Get current state
+            distance_to_goal = np.sqrt((c1.center.x - goal_pos.x)**2 + (c1.center.y - goal_pos.y)**2)
+            state = np.array([
+                c1.center.x / world_width,  # Normalize positions
+                c1.center.y / world_height,
+                c1.velocity.x / c1.max_speed,
+                c1.velocity.y / c1.max_speed,
+                c1.heading / (2 * np.pi),
+                distance_to_goal / world_height
+            ])
+            
+            # Get action from agent
+            steering, throttle = agent.act(state)
+            c1.set_control(steering, throttle)
+            
+            # Advance simulation
             w.tick()
             w.render()
+            
+            # Calculate reward
+            new_distance = np.sqrt((c1.center.x - goal_pos.x)**2 + (c1.center.y - goal_pos.y)**2)
+            
+            # Reward shaping
+            reward = 0
+            reward += (distance_to_goal - new_distance)  # Reward for getting closer to goal
+            reward -= abs(steering) * 0.1  # Small penalty for steering
+            
+            # Check if reached goal
+            done = False
+            if new_distance < goal_radius:
+                reward += 1000  # Big reward for reaching goal
+                done = True
+                print(f"Episode {episode}: Reached goal!")
+            
+            # Check for collisions
             if w.collision_exists():
+                reward = -1000  # Big penalty for collision
+                done = True
+            
+            # Get new state
+            new_distance_to_goal = np.sqrt((c1.center.x - goal_pos.x)**2 + (c1.center.y - goal_pos.y)**2)
+            next_state = np.array([
+                c1.center.x / world_width,
+                c1.center.y / world_height,
+                c1.velocity.x / c1.max_speed,
+                c1.velocity.y / c1.max_speed,
+                c1.heading / (2 * np.pi),
+                new_distance_to_goal / world_height
+            ])
+            
+            # Store experience in memory
+            action_idx = (agent.steering_actions.index(steering) * 
+                         len(agent.throttle_actions) + 
+                         agent.throttle_actions.index(throttle))
+            agent.remember(state, action_idx, reward, next_state, done)
+            
+            # Train the network
+            if len(agent.memory) > batch_size:
+                agent.replay(batch_size)
+            
+            total_reward += reward
+            steps += 1
+            
+            if done:
                 break
-    finally:
-        w.close() 
+        
+        # Update target network every episode
+        agent.update_target_model()
+        
+        print(f"Episode: {episode + 1}/{EPISODES}, Score: {total_reward:.2f}, Steps: {steps}")
+        
+        # Save the model periodically
+        if episode % 100 == 0:
+            torch.save(agent.model.state_dict(), f'dql_agent_episode_{episode}.pth')
+
+else: # Let's use the keyboard input for human control
+    from interactive_controllers import KeyboardController
+    c1.set_control(0., 0.) # Initially, the car will have 0 steering and 0 throttle.
+    controller = KeyboardController(w)
+    for k in range(600):
+        c1.set_control(controller.steering, controller.throttle)
+        w.tick() # This ticks the world for one time step (dt second)
+        w.render()
+        time.sleep(dt/4) # Let's watch it 4x
+        if w.collision_exists():
+            import sys
+            sys.exit(0)
+    w.close()

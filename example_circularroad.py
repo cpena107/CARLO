@@ -48,7 +48,7 @@ c1.max_speed = 30.0 # let's say the maximum is 30 m/s (108 km/h)
 c1.velocity = Point(0, 3.0)
 w.add(c1)
 
-#w.render() # This visualizes the world we just constructed.
+w.render() # This visualizes the world we just constructed.
 
 
 
@@ -101,7 +101,7 @@ if not human_controller:
             
             # Advance simulation
             w.tick()
-            #w.render()
+            w.render()
             
             # Calculate reward
             distance_to_center = c1.distanceTo(cb)

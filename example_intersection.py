@@ -24,7 +24,7 @@ w.add(Painting(Point(8.5, 41), Point(17, 82), 'gray80'))
 w.add(RectangleBuilding(Point(7.5, 40), Point(15, 80)))
 
 w.add(Painting(Point(71.5, 41), Point(97, 82), 'gray80'))
-w.add(RectangleBuilding(Point(72.5, 40), Point(95, 80)))
+w.add(RectangleBuilding(Point(72.5, 40), Point(70, 90)))
 
 # Let's also add some zebra crossings, because why not.
 w.add(Painting(Point(18, 81), Point(0.5, 2), 'white'))
@@ -32,6 +32,20 @@ w.add(Painting(Point(19, 81), Point(0.5, 2), 'white'))
 w.add(Painting(Point(20, 81), Point(0.5, 2), 'white'))
 w.add(Painting(Point(21, 81), Point(0.5, 2), 'white'))
 w.add(Painting(Point(22, 81), Point(0.5, 2), 'white'))
+
+# Add new sidewalks and buildings for the far right intersection
+w.add(Painting(Point(111.5, 106.5), Point(17, 27), 'gray80'))  # Top right sidewalk
+w.add(RectangleBuilding(Point(112.5, 107.5), Point(15, 25)))
+
+w.add(Painting(Point(111.5, 41), Point(17, 82), 'gray80'))  # Bottom right sidewalk
+w.add(RectangleBuilding(Point(112.5, 40), Point(15, 80)))
+
+# Add zebra crossings for the new intersection (similar pattern as existing ones)
+w.add(Painting(Point(98, 81), Point(0.5, 2), 'white'))
+w.add(Painting(Point(99, 81), Point(0.5, 2), 'white'))
+w.add(Painting(Point(100, 81), Point(0.5, 2), 'white'))
+w.add(Painting(Point(101, 81), Point(0.5, 2), 'white'))
+w.add(Painting(Point(102, 81), Point(0.5, 2), 'white'))
 
 # A Car object is a dynamic object -- it can move. We construct it using its center location and heading angle.
 c1 = Car(Point(20,20), np.pi/2)
