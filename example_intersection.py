@@ -85,7 +85,8 @@ w.render() # This visualizes the world we just constructed.
 
 if not human_controller:
     # Let's implement some simple scenario with all agents
-    #p1.set_control(0, 0.22) # The pedestrian will have 0 steering and 0.22 throttle. So it will not change its direction.
+    p1.set_control(0, 0.22) # The pedestrian will have 0 steering and 0.22 throttle. So it will not change its direction.
+    p2.set_control(0, 0.22)
     c1.set_control(0, 0.35)
     c2.set_control(0, 0.05)
     c3.set_control(0, 0.05)
